@@ -1,0 +1,16 @@
+//cv::blur函数的作用是将每个像素替换为相邻矩形内像素的平均值，用法如下：
+cv::blur(image,result,cv::Size(5,5));
+
+//计算加权平均数，如高斯
+cv::GaussianBlur(image,result,cv::Size(5,5,),1.5);
+
+//生成高斯核
+cv::Mat gauss=cv::getGaussianKernel(9,sigma,CV_32F);
+
+
+//改变图像大小
+//先使用低通滤波，在隔行隔列去除像素
+cv::Mat redeuceImage;
+cv::pyrDown(image,reduceImage);//将图像尺寸减半  pyrUp
+//还可用cv::resize函数
+cv::resize(image,dstImage,cv::Size(image.cols/3,image.rows/3));  //改为原图的三分之一

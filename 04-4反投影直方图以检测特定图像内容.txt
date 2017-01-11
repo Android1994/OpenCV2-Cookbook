@@ -1,0 +1,113 @@
+
+
+//提取ROI
+cv::Mat imageROI;
+imageROI=image(cv::Rect(360,55,40,50));
+
+
+//获取该ROI的直方图,调用之前的类方法
+Histgram1D h;
+cv::MatND hist=h.getHistogram(imageROI);
+
+//归一化直方图，
+cv::normalize(histogram,histogram,1.0);
+
+//反投影直方图用于替换一个输入图像中的每个像素值，使其变成归一化直方图中对应的概率
+cv::calBackProject(
+      &image,
+      1, //一幅图像
+       histogram, //进行反投影的直方图
+      result,   //生成的反投影图像
+      ranges, //每个维度的阈值
+       255.0 //缩放因子
+)；
+
+
+//结果图中，概率从亮（低概率）到暗（高概率）
+//再进行一次阈值化
+
+cv::threshold(result,result,255*threshold,255,cv::THRESH_BINARY);
+
+
+
+
+//-----------------
+//在直方图反投影算法中使用颜色信息
+//定义一个封装反投影过程的类
+class ContentFinder{
+       private:
+          float hranges[2];
+          const float* ranges[3];
+          int channels[3];
+          float threshold;
+          cv::MatND histogram;
+       public:
+          ContentFinder():threshold(-1.0f){
+             ranges[0]=hranges; //所有通道的值相同
+             ranges[1]=hranges;
+             ranges[2]=hranges; 
+          }
+
+
+
+//定义一个阈值参数，将用于创建显示检测结果的二值映射图，如果这个参数设置为负值，返回的将是原始的概率映射图
+//设置直方图的阈值[0,1]
+void setThreshod(float t){
+       threshold=t;
+}
+
+//获取阈值
+float getThreshold(){
+       return threshold;
+}
+
+//输入的直方图必须是归一化后的
+void setHistogram(const cv::MatND &h){
+   histogram=h;
+   cv::normalize(histogram,histogram,1.0);
+
+
+//需指定图像，范围（假设所有通道有相同的范围）及所用通道列表
+cv::Mat find(const cv::Mat& image, float minValue, float maxValue,int *channels,int dim){
+     cv::Mat result;
+     hranges[0]=minValue;
+     hranges[1]=maxValue;
+     for(int i=0;i<dim;i++)
+       this->channels[i]=channels[i];
+    
+     cv::calcBackProject(&image,1,//输入图像
+         channels, //所用通道列表
+         histogram,  //直方图
+         result,  //反投影的结果
+         ranges,  //值域
+         255.0 //缩放因子
+      );
+}
+
+
+//进行阈值化得到二值图像
+if(threshold>0.0)
+   cv::threshold(result,result,255*threshold,255,cv::THRESH_BINARY);
+    return result;
+}
+
+
+
+
+//-------------使用
+ColorHistogram hc;
+//读取彩图
+cv::Mat color=cv::imread("....");
+//减色，用之前的。。。
+color=hc.colorReduce(color,32);
+//蓝天区域(ROI)
+cv::Mat imageROI=color(cv::Rect(0,0,165,75));
+
+
+//使用find
+cv::MatND hist=hc.getHistogram(imageROI);
+ContentFinder finder;
+finder.setHistogram(hist);
+finder.setThreshold(0.05f);
+//得到彩色直方图的反投影
+cv::Mat result=finder.find(color);

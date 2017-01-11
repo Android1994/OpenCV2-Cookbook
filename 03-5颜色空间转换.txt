@@ -1,0 +1,53 @@
+//修改ColorDetector类算法，以使用另一个颜色空间
+
+//转换到CIE L*a*b空间，这样图像像素和目标色之间的欧拉距离才有意义
+
+//使用cv::cvtColor可轻易在不同颜色空间之间进行转换
+
+//------------------
+cv::Mat ColorDetector::process(const cv::Mat &image){
+    //按需重新分配二值图像
+    //与输入图像尺寸相同，但只有一个通道
+   result.create(image.rows,image.cols,CV_8U);
+   //按需重新分配中间图像
+   converted.create(image.rows,image.cols,image.type());
+   //转换到Lab颜色空间
+   cv::cvtColor(image,converted,CV_BGR2Lab);
+   //得到转换后图像的迭代器
+   cv::Mat_<cv::Vec3b>::iterator it=converted.begin<cv::Vec3b>();
+   cv::Mat_<cv::Vec3b>::iterator itend=converted.end<cv::Vec3b>();
+
+  //得到输出图像的迭代器
+  cv::Mat_<cv::Vec3b>::iterator itout=result.begin<uchar>();
+
+ //对每个像素
+ for(;it!=itend;it++,itout++){...}
+}
+
+
+ //--------------------
+//ColorDetector类
+class ColorDetector{
+    private:
+    //包含转换后的图像
+   cv::Mat converted;
+   
+//---------------------
+    //设置要检测的色彩
+   void settTargetColor(unsigned char red,unsigned char green,unsigned char blue)
+{ 
+    //临时1px图像
+    cv::Mat temp(1,1,CV_8UC3);
+    temp.at<cv::Vec3b>(0,0)[0]=blue;
+    temp.at<cv::Vec3b>(0,0)[1]=green;
+    temp.at<cv::Vec3b>(0,0)[2]=red;
+
+   //转换目标颜色到Lab空间
+   cv::cvtColor(temp,temp,CV_BGR2Lab);
+   target=temp.at<cv::Vec3b>(0,0);
+}
+
+
+//BGR或RGB次序
+//颜色空间还有YCrCb、HSV、HLS
+//cv::cvtCOlor(image,result,CV_BGR2Gray);

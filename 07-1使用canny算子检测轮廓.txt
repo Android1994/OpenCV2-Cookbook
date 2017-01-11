@@ -1,0 +1,19 @@
+//应用Canny算法
+cv::Mat contours;
+cv::Canny(
+            image,
+            contours,
+           125,  //低阈值
+           350 //高阈值
+);
+
+//可以加上反转黑白值
+cv::Mat contoursInv;
+cv::threshold(
+           contours,
+           contoursInv,
+            128, //低于该值的像素将变成255
+            255,
+           cv::THRESH_BINARY_INV
+);
+

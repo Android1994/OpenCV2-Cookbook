@@ -1,0 +1,43 @@
+//定义一个类来计算彩色图像的直方图
+
+class ColorHistogram{
+     private:
+     int histSize[3]; //项的条数
+     float hranges[2];  //像素值范围
+     const float *ranges[3];
+     int channels[3]; //3通道
+
+     public:
+     ColorHistogram(){
+     //准备彩色直方图的参数
+     histSize[0]=histSize[1]=histSize[2]=256;
+     hranges[0]=0.0;
+     hranges[1]=255.0;
+     ranges[0]=hranges; //所有通道有相同的范围
+     ranges[1]=hranges;
+     ranges[2]=hranges;
+     channels[0]=0;// 三个通道
+     channels[1]=1;
+     channels[2]=2;
+}
+
+.。。。
+}
+
+
+
+//计算彩色直方图
+cv::MatND getHistogram(const cv::Mat &image){
+           cv::MatND hist;
+           //计算
+           cv::calcHist(&image,
+             1,  //计算1张图
+             channels, //通道数量
+             cv::Mat(),  //不使用掩码
+             hist, //返回的直方图
+              3, //这是三维直方图
+              histSize, //项的数目
+              ranges //像素值的范围
+            );
+      return hist;
+}

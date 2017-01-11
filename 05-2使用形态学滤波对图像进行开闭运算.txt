@@ -1,0 +1,22 @@
+//更高级的形态学滤波，通过调用cv::morphologyEx函数
+
+//以下便是闭运算
+cv::Mat element5(5,5,CV_8U,cv::Scalar(1));
+cv::Mat closed;
+cv::morphologyEx(image,closed,cv::MORPH_CLOSE,element5);
+//这里使用5*5的结构元素
+
+//开运算
+cv::Mat opened;
+cv::morphologyEx(image,opened,cv::MORPH_OPEN,element5);
+
+//开运算：先腐蚀，后膨胀
+//闭运算：先膨胀，后腐蚀
+//所以闭运算亦可：
+//膨胀原图
+cv::dilate(image,result,cv::Mat());
+//对膨胀后的图像进行原地腐蚀
+cv::erode(result,result,cv::Mat());
+
+//闭-》将误分割成碎片的物体重新连接起来
+//开-》消除噪点引起的小像素块？

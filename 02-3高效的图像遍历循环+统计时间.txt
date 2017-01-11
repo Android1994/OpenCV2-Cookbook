@@ -1,0 +1,29 @@
+//用于统计一段代码耗费时间     cv::getTickCount() //测量一段代码的运行时间
+
+double duration;
+duration=static_cast<double>(cv::getTickCount());
+
+colorReduce(image);//被测函数
+
+duration=static_cast<double>(cv::getTickcount())-duration;
+duration/=cv::getTickFrequency();//运行时间，以ms为单位
+
+
+
+//at方法
+for(int j=0;j<nl;j++)
+   for(int i =0;i<nc;i++)
+{
+   image.at<cv::Vec3b>(j,i)[0]=.....;
+   image.at<...>()[1]=....;
+  .........................................;
+}
+
+
+
+//速度最快版本，用了位运算
+........
+
+
+
+

@@ -1,0 +1,80 @@
+//已识别出感兴趣物体，使用HSV颜色空间的色调(Hue)通道来描述物体
+
+//读取参考图像
+cv::Mat image=cv::imread("../");
+//狒狒脸部的ROI
+cv::Mat imgeROI=image(cv::Rect(110,260,35,40));
+//获取色调通道的直方图
+int minSat=65; //饱和度的阈值
+ColorHistogram hc;
+cv:MatND colorhist=hc.getHueHisogram(imageROI,minSat);
+
+
+//类中的方法getHueHisogram
+//使用掩码计算1D色调直方图
+//BGR图像需转换为HSV色彩空间
+//并去除低饱和度的像素
+cv::MatND getHueHistogram(const cv::Mat &image,int minSaturation=0){
+      cv::matND hist;
+      //转换为HSV色彩空间
+      cv::Mat hsv;
+      cv::cvtColor(image,hsv,CV_BGR2HSV);
+      //是否使用掩码
+     cv::Mat mask;
+
+      if(minSaturation>0){
+         //分割三通道为三幅图像
+         std::vector<cv::Mat>v;
+         cv::split(hsv,v);
+         //标出低饱和度的像素
+         cv::threshold(v[1],mask,minSaturation,255,cv::THRESH_BINARY);
+       }
+
+       //1D色调直方图的参数
+       hranges[0]=0.0;
+       hranges[1]=180.0;
+       channels[0]=0;//色调通道
+        //计算直方图
+       cv::Hist(&hsv,
+           1, //一幅图
+           channels,//通道数量
+           mask, //掩码
+           hist, //返回的直方图
+           1, //1D直方图
+           histSize, //项的数量
+           ranges //像素值的范围
+        );
+
+       return hist;
+}
+
+
+//产生的直方图之后作为ContentFinder的参数
+ContentFinder finder;
+finder.setHistogram(colorhist);
+
+
+
+//打开第二张图，在这里找新的狒狒的脸部
+image=cv::imread("...");
+//显示图像
+cv::imshow("Image 2",image);
+//转到HSV空间
+cv::cvtColor(image,hsv,CV_BGR2HSV);
+//分割图像
+cv::split(hsv,v);
+//识别低饱和度 的像素
+cv::threshold(v[1],v[1],minSat,255,cv::THRESH_BINARY);
+
+//使用之前获取的直方图获取这张图像的色调通道反投影
+//获取直方图的反投影
+result=finder.find(hsv,0.0f,180.0f,ch,1);
+//去除低饱和度的像素
+cv::bitwise_and(result,v[1],result);
+
+
+//从最初的矩形区域（即狒狒脸在最初的图像中的位置）开始，cv::meanShift算法将会在新的位置更新这个矩阵对象
+cv::Rect rect(110,260,35,40);
+cv::rectangle(image,rect,cv::Scalar(0,0,255));
+cv::TermCriteria criteria(cv::TerCriteria::MAX_ITER,10,0.01);
+cv::meanShift(result,rect,criteria);

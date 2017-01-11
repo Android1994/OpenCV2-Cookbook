@@ -1,0 +1,33 @@
+//形态学滤波通常使用于二值图像，先生成二值图像
+//形态学惯例是用高（白色）像素表示前景图像，用低（黑色）像素表示背景，所以还需对图像取反
+//腐蚀和膨胀由函数cv::erode及cv::dilate实现
+
+//读取输入图像
+cv::Mat image=cv::imread("....");
+//腐蚀图像
+cv::Mat eroded;
+cv::erode(image,eroded,cv::Mat());
+//显示腐蚀后的图像
+cv::namedWindow("Eroded Image");
+cv::imshow("Eroded Image",eroded);
+//膨胀图像
+cv::Mat dilated;
+cv::dilate(image,dilated,cv::Mat());
+//显示膨胀后的图像
+cv::namedWindow("Dilated Image");
+cv::imshow("Dilated Image",dilated);
+
+//cv::Mat()参数指定结构元素，默认为3*3矩阵
+//下面是设置一个7*7的结构元素
+cv::Mat element(7,7,CV_8U,cv::Scalar(1));
+cv::erode(image,eroded,element);
+
+//另一个获得相同结果的方法是对一幅图像反复应用同一个结构元素，这两个函数都有一个可选的参数用于指定重复的次数
+
+//腐蚀图像三次
+cv::erode(image,eroded,cv::Mat(),cv::Point(-1,-1),3);
+//cv::Point(-1,-1)代表原点位于矩阵中心（默认），可被修改为结构元素任意位置
+//腐蚀一幅图像两次就相当于让结构元素对自己膨胀后再去腐蚀同一幅图像（膨胀一样）
+
+//可用于灰度图，也支持原地处理
+cv::erode(image,image,cv::Mat());

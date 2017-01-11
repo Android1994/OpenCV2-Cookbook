@@ -1,0 +1,4 @@
+//使用上一节的ColorDetectController类，该类将被修改，以包含一个单件类
+//只允许有一个类实例
+
+class 

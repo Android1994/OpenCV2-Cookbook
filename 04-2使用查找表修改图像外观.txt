@@ -1,0 +1,83 @@
+//查找表是一个简单的一对一（或多对一）函数，定义了如何将像素值转换为新的值
+
+//本质上是一个一维数组，对于灰度图而言有256个项，第i项表示对应灰度的新值
+//即newIntensity=lookup[oldIntensity];
+
+//cv::LUT对图像应用查找表以生成新图象，添加到Histogram1D类中：
+
+cv::Mat applyLookUp(const cv::Mat &image//输入,const cv::Mat &lookup){
+         //lookup是1*256 uchar matrix
+         cv::Mat result;
+         //应用查找表
+         cv::LUT(image,lookup,result);
+          return result;
+}
+
+
+//--------
+//创建图像的反向查找表
+int dim(256);
+cv::Mat lut(1, //1D
+       &dim,    //256项
+       CV_8U  //uchar
+);
+
+for(int i=0;i<256;i++)
+     lut.at<uchar>(i)=255-i;
+
+
+//---------------------
+//定义一个提高对比度的查找表
+//即拉伸直方图
+//直方图有部分范围没有用到
+//重新定位最低和最高强度值
+//中间强度i重新映射为 255.0*(i-imin)/(imax-imin)+0.5
+
+//具体定义
+cv::Mat stretch(const cv::Mat &image,int minValue=0){
+       //首先计算直方图
+       cv::MatND hist=getHistogram(image);
+
+       //寻找直方图的左端
+       int imin=0;
+       for(;imin<histSize[0];imin++){
+       std::cout<<hist.at<float>(imin)<<std::endl;
+        if(hist.at<float>(imin)>minValue)
+         break;
+       }
+
+      //寻找直方图的右端
+       int imax=histSize[0]-1;
+       for(;imax>=0;imax--){
+       if(hist.at<float>(imax)>minValue)
+           break;
+         } 
+
+
+        //创建查找表
+      int dim(256);
+      cv::Mat lookup(1, //1维
+       &dim,  //256项
+       CV_8U //uchar
+       );
+
+       //填充查找表
+       for(int i=0;i<256;i++){
+       //确保数值位于imin与imax之间
+      if(i<imin)lookup.at<uchar>(i)=0;
+      else if(i>imax)lookup.at<uchar>(i)=255;
+
+      //线性映射
+      else lookup.at<uchar>(i)=static_cast<uchar>(255.0*(i-imin)/(imax-imin)+0.5);
+}
+
+       //应用查找表
+    cv::Mat result;
+    result=applyLookUp(image,lookup);
+    return result;
+}
+
+
+
+//使用
+cv::Mat streteched=h.stretch(image);

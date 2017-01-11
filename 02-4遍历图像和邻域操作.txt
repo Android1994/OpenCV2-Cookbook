@@ -1,0 +1,10 @@
+//上下左右
+void sharpen(const cv::Mat &image,cv::Mat &result)
+{
+    //如有必要则分配图像
+    result.create(image.size(),image.type());
+     for(int j=1;j<image.rows-1;j++)   //处理除了第一行和最后一行的所有行
+    {
+     const uchar*    
+    }
+}

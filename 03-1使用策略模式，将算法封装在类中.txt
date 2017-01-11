@@ -1,0 +1,116 @@
+//鉴别图像含有给定颜色的所有像素
+
+//----------------------------------
+//算法核心部分，遍历：
+//得到迭代器：
+cv::Mat_<cv::Vec3b>::const_iterator it=image.begin<cv::Vec3b>();
+cv::Mat_<cv::Vec3b>::const_iterator itend=image.end<cv::Vec3b>();
+
+cv::Mat_<cv::Vec3b>::iterator itout=result.begin<uchar>();
+
+//对于每个像素
+for(;it!=itend;it++,itout++)
+{
+      //处理每个像素
+      //计算离目标颜色的距离
+      if(getDistance(*it)<minDist)
+      {
+          *itout=255;
+      }
+      else{
+          *itout=0;
+       }
+}
+
+//---------------------------
+//getDistance方法的定义
+int getDistance(const cv::Vec3b &color) const{
+    return abs(color[0]-target[0])+abs(color[1]-target[1])+abs(color[2]-target[2]);
+}
+
+
+
+//-------------------------------
+//process方法的定义
+cv::Mat ColorDetect::process(const cv::Mat &image){
+      //按需重新分配二值图像
+      //与输入图像的尺寸相同，但只有一个通道
+     result.create(image.rows,image.cols,CV_8U);
+
+     //之前的核心遍历循环：
+     ......
+     return result;
+}
+
+
+//----------------
+//类中保存的数据
+class ColorDetector{
+   private:
+     //最小可接受距离
+    int minDist;
+     //目标色
+   cv::Vec3b target;
+     //结果图像
+   cv::Mat result;
+ }
+
+//构造函数
+ColorDetector():minDist(100){
+      //初始化默认参数
+      target[0]=target[1]=target[2]=0;//黑色
+}
+
+
+//---------------------------
+//调用合适的取值函数，确保算法以有效参数运行
+
+//设置色彩距离阈值，阈值必须为正，否则设为0
+void setColorDistanceThreshold(int distance){
+        if(distance<0)
+         distance=0;
+        minDist=distance;
+}
+
+//获取色彩阈值距离
+int getColorDistanceThreshold() const{
+     return minDist;
+}
+
+//设置需检测的颜色
+void setTargetColor(unsigned char red,unsigned char green, unsigned char blue){
+         //BGR顺序
+         target[2]=red;
+         target[1]=green;
+         target[0]=blue;
+}
+
+//设置需检测的颜色
+void setTargetColor(cv::Vec3b color){
+       target=color;
+}
+
+//获取需检测的颜色
+cv::Vec3b getTargetColor() const{
+      return target;
+}
+
+//一个简单的main函数
+int main()
+{
+  ColorDetector cdetect;
+
+  cv::Mat image=imread(...);
+
+   if(!image.data)
+      return 0;
+
+    cdetect.setTargetColor(130,190,230);
+
+    cv::nameWindow(“。。。”);
+
+     cv::imshow("resule",cdetect.process(image));
+     cv::waitKey();
+     return 0;
+}
+

@@ -1,0 +1,68 @@
+//分水岭分割的结果通过cv::watershed函数获得，函数输入是一个32位的有符号整数标记图，每个非零像素表示一个标记，先将已知属于某个区域的像素进行标记
+
+class WatershedSegmenter{
+        private:
+          cv::Mat markers;
+        public:
+          void setMarkers(const cv::Mat& markerImage){
+              //转换为整数图像
+              markerImage.converTo(markers,CV_32S);
+         }
+
+           cv::Mat process(const cv::Mat& image){
+               //使用算法
+              cv::watershed(image,markers);
+              return markers;
+         }
+
+....
+}
+
+
+
+//这里，我们用二值图像来标识对应的原始图像中的动物，用255标记前景像素，128标记背景像素，其它像素标签未知被赋值为0
+//移除噪点与微小物体
+cv::Mat fg;
+cv::erode(binary,fg,cv::Mat(),cv::Point(-1,-1),6);
+
+//识别不包含物体的像素
+cv::Mat bg;
+cv::dilate(binary,bg,cv::Mat(),cv::Point(-1,-1),6);
+cv::threshold(bg,bg,1,128,cv::THRESHOLD_BINARY_INV);
+
+//组合使用这些图可以形成标记图形
+//创建标记图像
+cv::Mat markers(binary.size(),CV_8U,cv::Scalar(0));
+markers=fg+bg;
+
+
+//使用分水岭
+//创建分水岭分割对象
+WatershedSegmenter segmenter;
+//设置标记，并进行处理
+segmenter.setMarkers(markers);
+segmenter.process(image);
+
+
+
+
+//----------------------
+//-----------------
+//两个特殊方法
+//第一个返回标记图像,通过阈值化实现
+//以图像的形式返回结果
+cv::Mat getSegmentation(){
+      cv::Mat tmp;
+      //标签高于255的分割一律赋值为255
+      markers.convertTo(tmp,CV_8U);
+      return tmp;
+}
+
+//第二个返回的图像中分水岭上的像素被赋值为0，剩下都为255
+//以图像的形式返回分水岭
+cv::Mat getWatersheds(){
+         cv::Mat tmp;
+         //转换前每个像素都为255p+255
+          markers.convertTo(tmp,CV_8U,255,255);
+          return tmp;
+}

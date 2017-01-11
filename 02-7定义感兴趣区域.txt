@@ -1,0 +1,28 @@
+//定义图像ROI
+cv::Mat imagePoi;
+imageROI=image(cv::Rect(385,270,logo.clos,logo.rows));
+//插入logo
+cv::addWeighted(imageROI,1.0,logo,0.3,0.,imageROI);
+
+
+//--------------
+//直接将插入处像素设置为Logo图像的像素值
+//定义ROI
+imageROI=image(cv::Rect(385,270,log.cols,log.rows));
+//加载掩模（必须是灰度图）
+cv::Mat mask=cv::imread("logo.bpm",0);
+//通过掩模拷贝ROI
+logo.copyTo(imageROI,mask);
+
+
+//-----------------------
+//定义ROI的另一种方式Range
+cv::Mat imageROI=image(cv::Range(270,270+logo.rows),cv::Range(385,385+logo.cols));
+
+//创建包含原图像特定行的ROI
+cv::Mat imageROI=image.rowRange(start,end);
+
+//对于列：
+cv::Mat imageROI=image.colRange(start,end);
+
+

@@ -1,0 +1,80 @@
+//另一种高通线性滤波器，计算二阶导数以衡量图像的弯曲度
+//对于这个算子，创建一个简单的类来封装一些有用的算子
+
+class LaplacianZC{
+        private:
+             //原图
+             cv::Mat img;
+            //包含Laplacian的32位浮点图像
+             cv::Mat laplace;
+            //laplacian卷积核的大小
+             int aperture;
+        public:
+             LaplacianZC():aperture(3){}
+             //设置卷积核的大小
+            void setAperture(int a){
+                  aperture=a;
+             }
+
+             //计算浮点数Laplacian
+            cv::Mat computeLaplacian(const cv::Mat& image){
+                 //计算Laplacian
+                cv::Laplacian(image,laplace,CV_32F,aperture);
+                //保留图像的局部备份（用于零点交叉）
+                img=image.clone();
+                return laplace;
+            }
+......
+
+            //进行重缩放，0对应128
+            //返回8位图像存储的Laplacian结果
+           //零点交叉于灰度值128
+           //如果没有指定scale参数，那么最大值将缩放至强度255
+           //你必须在调用它之前调用computeLaplacian
+            cv::Mat getLaplacianImage(double scale=-1.0){
+                  if(scale<0){
+                         double lapmin,lapmax;
+                         cv::minMaxLoc(laplace,&lapmin,&lapmax);
+                         scale=127/std::max(-lapmin,lapmax);
+                     }
+                  cv::Mat laplaceImage;
+                  laplace.convertTo(laplaceImage,CV_8U,scale,128);
+                  return laplaceImage;
+             }
+}
+
+
+
+
+//使用该类，可以计算图像的7*7拉普拉斯变换：
+laplacianZC laplacian;
+ laplacian.setAperture(7);
+ cv::Mat flap=laplacian.computeLaplacian(image);
+ laplace=laplacian.getLaplacianImage();
+
+
+
+//得到零点交叉（零交点）的二值图像
+//如果相邻像素的乘积小于threshold,那么零点交叉将被忽略
+cv::Mat getZeroCrossings(float threshold=1.0){
+           //创建迭代器
+          cv::Mat_<float>::const_iterator it=laplace.begin<folat>()+laplace.step1();
+          cv::Mat_<float>::const_iterator itend=laplace.end<folat>();
+          cv::Mat_<float>::const_iterator itup=laplace.begin<folat>();
+
+           //初始化为白色的二值图像
+           cv::Mat binary(laplace.size(),CV_8U,cv::Scalar(255));
+           cv::Mat_<uchar>::Iterator itout=binary.begin<uchar>()+binary.step1();
+           //对输入阈值取反
+           threshold*=-1.0;
+           for(;it!=itend;++it,++itup,++itout){
+           //如果相邻像素的乘积为负数，那么符号发生改变
+           if(*it**(it-1)<threshold)
+               *itout=0; //水平方向零点交叉
+           else if(*it**itup<threshold)
+               *itout=0; //垂直方向零点交叉
+            }
+            return binary;
+}
+
+//让一幅图像减去它的Laplacian可以增强对比度

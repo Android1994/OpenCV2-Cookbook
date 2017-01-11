@@ -1,0 +1,18 @@
+//产生椒盐点
+void salt(cv::Mat &image,int n)
+{
+for(int k=0;k<n;k++)
+{
+    //Qt中可用qrand()
+    int i=rand()%image.cols;
+    int j=rand()%image.rows;
+    if(image.channels()==1)//灰度图
+        image.at<uchar>(j,i)=255;  (y;x)?
+    else if(image.channels()==3) //彩图
+         {
+             image.at<cv::Vec3b>(j,i)[0]=255;
+             image.at<cv::Vec3b>(j,i)[1]=255;
+             image.at<cv::Vec3b>(j,i)[2]=255;
+         }
+}
+}

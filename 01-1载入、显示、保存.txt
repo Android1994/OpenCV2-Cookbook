@@ -1,0 +1,33 @@
+#include <QMessageBox>
+#include <QtWidgets/QMainWindow>
+#include <QFileDialog>
+#include <opencv2\core\core.hpp>
+#include <opencv2\highgui\highgui.hpp>
+
+//一个按键，打开文件
+QString fileName=QFileDialog::getOpenFileName(this, tr("选择图片"), ".", tr("Image Files(*,png *.jpg *.jepg *.bmp)"));
+image=cv::imread(fileName.toLocal8Bit().data());
+//if(!image.data){......}//是否正确读入图片
+cv::namedWidow("Original Image");
+cv::imshow("Original Image",image);
+
+//一个按键，反转图片
+cv::flip(image,image,1); //1表示水平反转，0表示垂直反转
+cv::namedWindow("Output Image");
+cv::imshow("Output Image",image);
+
+//反转图片并显示在GUI中  (有问题。。)
+cv::flip(image,image,1);
+cv::cvtColor(image,image,CV_BGR2RGB); //Mat为BGR,Qimage为RGB
+QImage img=QImage((const unsigned char*)(image.data),image.cols,image.rows,QImage::Format_RGB888);
+//显示在label中
+ui->label->setPixmap(QPixmap::fromImage(img));   //????????
+//改变label尺寸以自适应图像
+ui->label->resize(ui->label->pixmap()->size());
+
+
+
+
+//输出保存
+cv::imwrite("output.bmp",result);
+

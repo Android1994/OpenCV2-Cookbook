@@ -1,0 +1,92 @@
+//可使用cv::calcHist函数统计
+
+//定义一个专门的类来处理单通道灰度图像
+class Histogram1D{
+       private:
+       int histSize[1];   //项的数量（条数）
+       float hranges[2]; //像素的最小及最大值
+       const float *ranges[1];
+       int channels[1]; //仅有一个通道
+
+       public:
+       Histogram1D(){
+       //准备 1D直方图的参数      
+       histSize[0]=256;
+       hranges[0]=0.0;
+       hranges[1]=255.0;
+       ranges[0]=hranges;
+       channels[0]=0; //默认情况，考察0号通道
+}
+。。。
+
+//计算1D直方图
+cv::MatND getHistogram(const cv::Mat &image){
+      cv::MatND hist;
+       //计算直方图
+      cv::calcHist(&image,
+       1,     //计算单张图像的直方图
+        channels,   //通道数量
+       cv::Mat(),  //不使用图像作为掩码,掩码指明哪些像素需要统计，掩码值为0的项目都会被忽略
+       hist,  //返回的直方图
+       1,   //这是1D的直方图
+       histSize,  //项的数目
+        ranges  //像素值的范围
+       );
+       return hist;
+}
+
+
+//-----------------
+//使用
+//读取图像
+cv::Mat image=cv::imread("....",0);
+//histogram对象
+Histogram1D h;
+
+//计算直方图
+cv::MatND histo=h.getHistogram(image);
+
+//输出结果
+//遍历每个条目
+for(int i=0;i<256;i++){
+   cout<<"Value"<<i<<"="<<histo.at<float>(i)<<endl;
+}
+
+
+
+
+
+//---------------------------------------
+//计算1D直方图,并返回一幅图像
+cv::Mat getHistogramImage(const cv::Mat &image){
+         //首先计算直方图
+         cv::MatND hist=getHistogram(image); //MatND...
+         //获取最大值和最小值
+        double maxVal=0;
+         double minVal=0;
+        cv::minMaxLoc(hist,&minVal,&maxVal,0,0); //?????
+        //显示直方图的图像
+        cv::Mat histImg(histSize[0],histSize[0],CV_8U,cv::Scalar(255));
+
+        //设置最高点为nbins的90%
+       int hpt=static_cast<int>(0.9*histSize[0]);
+       //每个条目都绘制一条垂直线
+       for(int h=0;h<histSize[0];h++){
+        float binVal=hist.at<float>(h);
+        int intensity=static_cast<int>(binVal*hpt/maxVal);
+        //两点之间绘制一条线
+       cv::line(histImg,cv::Point(h,histSize[0]),cv::Point(h,histSize[0]-intensity),cv::Scalar::all(0));
+}
+         return histImg;
+}
+
+//以图形方式显示直方图
+cv::namedWindow("HIstogram");
+cv::imshow("Histogram",h.getHistogramImage(image));
+
+
+//------------------
+//使用一个阈值创建二值图
+cv::Mat thresholded;
+cv::threshold(image,thresholded,60,255,cv::THRESH_BINARY);
+

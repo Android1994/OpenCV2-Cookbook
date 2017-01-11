@@ -1,0 +1,42 @@
+//图像是一个矩阵
+//图像加法cv::addWeighted（要求有相同尺寸）
+
+//c[i]=a[i]+b[i]
+cv::add(imageA,imageB,resultC);
+
+//c[i]=a[i]+k
+cv::add(imageA,cv::Scalar(k),resultC);
+
+//c[i]=k1*a[i]+k2*b[i]+k3
+cv::addWeighted(imageA,k1,imageB,k2,k3,resultC);
+
+//c[i]=k*a[i]+b[i]
+cv::scaleAdd(imageA,k,imageB,resultC);
+
+//if(mask[i])  c[i]=a[i]+b[i]
+cv::add(imageA,imageB,resultC,mask);
+
+
+//--------------------------------------------------------
+//加减乘除，位运算，绝对值，最小、最大值，对数，指数等
+
+//运算符重载
+
+//CvScalar就是一个可以用来存放4个double数值的数组；一般用来存放像素值（不一定是灰度值哦）的，最多可以存放4个通道的
+typedef struct CvScalar
+{
+double val[4];
+}CvScalar
+
+
+//------------------------------------
+//想在单一通道进行运算，可以用之前的图像遍历或者Split:
+
+//创建一个图像向量
+std::vector<cv::Mat>planes;
+//将一个三通道图像分离为三个单通道图像
+cv::split(image,planes);
+//将新图层叠加到蓝色通道
+planes[0]+=image2;
+//将三个单通道图像重新合并为一个三通道图像
+cv::merge(planes,result);

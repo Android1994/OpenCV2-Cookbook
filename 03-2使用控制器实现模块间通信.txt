@@ -1,0 +1,95 @@
+//使用03-1中的ColorDetector类
+
+//控制器
+class ColorDetectController{
+     private:
+     //算法类
+     ColorDetector* cdetect;
+     cv::Mat image; //被处理图像
+     cv::Mat result;  //结果
+     
+     public:
+     ColorDetectController(){
+     //初始化工作
+     cdetect=new ColorDetector();
+      }
+...
+
+//-----------
+//定义设置函数和取值函数
+void setColorDistanceThreshold(int distance){
+       cdetect->setColorDistanceThreshold(distance);
+}
+
+//获取色彩距离阈值
+int getColorDistanceThreshold() const{
+        return cdetect->getColorDistanceThreshold();
+}
+
+//设置要检测的色彩
+void setTargetColor(unsigned char &red,unsigned char &green, unsigned char &blue) const {
+     cv::Vec3b color=cdetect->getTargetColor();
+     red=color[2];
+     green=color[1];
+     blue=color[0];
+}
+
+//设置输入图像，通过文件读取
+bool setInputImage(std::string filname){
+      image=cv::imread(filname);
+       if(!image.data)
+       return false;
+       else
+       return true;
+}
+
+//返回当前的输入图像
+const cv::Mat getInputImage() const {
+     return image;
+}
+
+//开始图像处理
+void process(){
+   result=cdetect->process(image);
+}
+
+//获取最近一次处理的结果
+const cv::Mat getLastResult() const{
+     return result;
+}
+
+//删除当前控制器创建的处理对象
+~ColorDetectController(){
+    delete cdetect;
+}
+
+
+//-----------------
+//创建一个非常基本的基于对话框的应用程序来使用此控制器
+//对MFC对话框而言，Open按钮看起来如下
+
+//Open按钮的回调函数
+void OnOpen()
+{
+   //用于选择bmp或jpg的MFC控件
+   CFileDialog dlg(.....);
+   dlg.m_ofn.lpstrTitle=_T("Open Image");
+   //如果选中了一个文件
+  if(dlg.DoModal()==IDOK){
+    //获取选中文件的路径
+    std::string filename=dlg.GetPathName();
+   //设置并显示该图像
+   colordetect.setInputImage(filename);
+   cv::imshow("Input Image",colordetect.getInputImage());
+  }
+}
+
+//Process按钮的回调函数
+void OnProcess()
+{
+    //此处目标色为硬编码
+    colordetect.setTargetColor(130,190,230);
+    //处理输入图像，并显示结果
+   colordetect.process();
+   cv::imshow("Output Result",colordetect.getLastResult());
+}

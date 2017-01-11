@@ -1,0 +1,51 @@
+//强调高频分量，属于高通滤波
+
+//sobel水平：
+cv::Sobel(
+         image, //输入
+         sobelX, //输出
+         CV_8U,  //图像类型
+           1,  //x方向阶数
+           0, //y方向阶数
+           3, //核大小
+           0.4,  //缩放值
+           128 //偏移量
+);
+
+//sobel垂直：
+cv::Sobel(image,sobelY,CV_8U,0,1,3,0.4,128);
+
+//由于核包含正数和负数，滤波结果保存在16位有符号整数中(CV_16S)
+//两个滤波器结合得到Sobel滤波器的范式
+//计算Sobel范式
+cv::Sobel(image,sobelX,CV_16s,1,0);
+cv::Sobel(image,sobelY,CV_16s,0,1);
+cv::Mat sobel;
+//计算L1范式
+sobel=abs(sobelX)+abs(sobelY);
+
+
+//缩放，0值对应白色
+//搜寻Sobel极大值
+double sobmin,sobmax;
+cv::minMaxLoc(sobel,&sobelmin,&sobmax);
+//变换为8位图像
+//sobelImage=-alpha*sobel+255 //alpha：缩放量
+cv::Mat sobelImage;
+sobel.convertTo(sobelImage,CV_8U,-255./sobmax,255);//？
+
+//阈值化
+cv::threshold(sobelImage,sobelThresholded,threshold,255,cv::THRESH_BINARY);
+
+//在opencv下计算距离和方向
+//Sobel必须以浮点数格式进行计算
+cv::Sobel(image,sobelX,CV_32F,1,0);
+cv::Sobel(image,sobelY,CV_32F,0,1);
+//计算L2范式及梯度方向
+cv::Mat norm,dir;
+cv::carToPolar(sobelX,sobelY,norm,dir); //默认为弧度，可设置为角度
+
+//对梯度的大小进行阈值化
+//其它prewitt,roberts,scharr等算子
+
+

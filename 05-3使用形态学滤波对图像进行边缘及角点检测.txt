@@ -1,0 +1,126 @@
+//检测直线和角点
+//首先定义名为MorphoFeatures的类，用它来检测图像特征
+class MorphoFeatures{
+       private:
+           //用于生成二值图像的阈值
+        int threshold;
+           //角点检测中用到的结构元素
+        cv::Mat cross;
+        cv::Mat diamond;
+        cv::Mat square;
+        cv::Mat x;
+
+        //使用cv::morphologyEx函数配合上合适的滤波器可轻松实现直线的检测
+        cv::Mat getEdges(const cv::Mat& image){
+           //得到梯度图
+               cv::Mat result;
+               cv::morphologyEx(image,result,cv::MORPH_GRADIENT,cv::Mat());
+          //阈值化以得到二值图像
+          applyThreshold(result);
+          return result;
+}
+
+
+         //一个私有函数用于获取二值的边缘图像
+    void applyThreshold(cv::Mat& result){
+        //使用阈值化
+         if(threshold>0){
+                cv::threshold(result,result,threshold,255,cv::THRESHOLD_BINARY);
+             }
+       }
+
+..............
+}
+
+
+
+
+//在mian函数中使用该类，可得到边缘图像
+//创建形态学特征实例
+MorphoFeatures morpho;
+morpho.setThreshold(40);
+//获取边缘
+cv::Mat edges;
+edges=morpho.getEdges(image);
+
+
+
+
+//----------------------------
+//---------------------------------------
+//用形态学检测角点要复杂一些，需要定义四种不同的结构元素，包括方形、菱形、十字形以及X形，这都在构造函数中完成（方便起见尺寸固定为5*5）
+
+    MorphoFeatures():threshold(-1),cross(5,5,CV_8U,cv::Scalar(0)),diamond(5,5,CV_8U,cv::Scalar(1)),square(5,5,CV_8U,cv::Scalar(1)),x(5,5,CV_8U,cv::Scalar(0)){
+    //创建十字形元素
+    for(int i=0;i<5;i++){
+       cross.at<uchar>(2,i)=1;
+       cross.at<uchar>(i,2)=1;
+}
+    //创建菱形元素
+     diamond.at<uchar>(0,0)=0;
+     diamond.at<uchar>(0,1)=0;
+     diamond.at<uchar>(1,0)=0;
+     diamond.at<uchar>(4,4)=0;
+     diamond.at<uchar>(3,4)=0;
+     diamond.at<uchar>(4,3)=0;
+     diamond.at<uchar>(4,0)=0;
+     diamond.at<uchar>(4,1)=0;
+     diamond.at<uchar>(3,0)=0;
+     diamond.at<uchar>(0,4)=0;
+     diamond.at<uchar>(0,3)=0;
+     diamond.at<uchar>(1,4)=0;
+
+     //创建x形元素
+     for(int i=0;i<5;i++){
+         x.at<uchar>(i,i)=1;
+         x.at<uchar>(4-i,i)=1;
+      }
+}
+
+
+//在检测角点特征的过程中，需要连接使用这些结构元素
+cv::Mat getCorners(const cv::Mat& image){
+      cv::Mat result;
+      //十字膨胀
+      cv::dilate(image,result,cross);
+      //菱形腐蚀
+      cv::erode(result,result,diamond);
+      cv::Mat result2;
+      //x形膨胀
+      cv::dilate(image,result2,x);
+      //方形腐蚀
+      cv::erode(result2,result2,square);
+      //通过对两张图像做差值得到角点图像
+      cv::absdiff(result2,result,result);
+      //阈值化以得到二值图像
+      applyThreshold(result);
+      return result;
+}
+
+
+//为了更好地可视化检测结果，下述方法在每个检测点上绘制一个圆
+void drawOnImage(const cv::Mat& binary,cv::Mat& image){
+        cv::Mat_<uchar>::const_iterator it=binary.begin<uchar>();
+        cv::Mat_<uchar>::const_iterator itend=binary.end<uchar>();
+        //遍历每个元素
+        for(int i=0;it!=itend;++it,++i){
+         if(!*it)
+           cv::circle(image,cv::point(i%image.step,i/image.step),5,cv::Scalar(255,0,0));
+}
+}
+
+//使用下述代码检测图像中的角点
+//得到角点
+cv::Mat corners;
+corners=morpho.getCorners(image);
+//在图像中显示角点
+morpho.drawOnImage(corners,image);
+cv::namedWindow("Corners on Image");
+cv::imshow("Corners on Image",image);
+
+
+
+
+///===============
+//========================
+//作用原理

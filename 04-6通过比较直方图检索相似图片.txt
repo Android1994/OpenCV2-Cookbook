@@ -1,0 +1,49 @@
+//用cv::compareHist函数
+//创建ImageComparator类，使用颜色直方图进行比较，所以用到了ColorHistogram类
+
+class ImageComparator{
+        private:
+        cv::Mat reference;
+        cv::Mat input;
+        cv::MatND refH;
+        cv::MatND inputH;
+        ColorHistogram hist;
+        int div;
+        public:
+        ImageComparator():div(32){}
+...
+
+
+//为了获得一个可靠的相似度度量，必须降低颜色数量，因此需要一个减色因子
+//减色因子
+//比较的将是减色后的图像
+//色彩空间中的每个维度都将按照该变量进行减色
+
+void setColorReduction(int factor){
+       div=factor;
+} 
+
+int getColorReduction(){
+       return div;
+}
+
+
+//查询图像使用一个适当的赋值函数进行指定，同时也减少图像的颜色
+
+void setReferenceImage(const cv::Mat& image){
+       reference=hist.colorReduce(image,div);
+       refH=hist.getHistogram(reference);
+}
+
+
+//最后用一个比较函数比较参考图像与给定的输入图像，该方法返回一个分数表明相似度
+double compare(const cv::Mat& image){
+        input=hist.colorReduce(image,div);
+        inputH=hist.getHistogram(input);
+        return cv::compareHist(refH,inputH,CV_COMP_INTERSECT);
+}
+};
+
+//这个类可用于检索一个给定的查询图像相似度的图像，查询图像的设置方法
+ImageComparator c;
+c.setReferenceImage(image);

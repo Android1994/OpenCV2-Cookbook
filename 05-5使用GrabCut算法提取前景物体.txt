@@ -1,0 +1,48 @@
+//期望从静态图像中提取前景物体，效果较好
+//需要标记出背景像素及前景像素
+
+//一种指定局部标记的方法是定义一个矩形，前景物体被它包围
+//打开图像
+image=imread("..");
+//定义前景物体的包围盒
+cv::Rect rectangle(10,100,380,180);
+
+//矩形之外的所用像素都将被标记为背景
+//调用函数还需定义两个矩阵，它们将包含算法创建的模型
+cv::Mat result; //分割（四种可能的值）
+cv::Mat bgModel,fgModel;//模型（供内部使用）
+//GrabCut分割
+cv::grabCut(
+          image,//输入图像
+          result, //分割结果
+          rectangle,//包含前景物体的矩形
+          bgModel,fgModel, //模型
+          5, //迭代次数
+          cv::GC_INIT_WITH_RECT  //使用矩形进行初始化
+);
+
+//最后一个参数表示我们使用的是包围盒模式
+//输入/输出分割图像可以有四种数值：
+//cv::GC_BGD :确定属于背景的像素
+//cv::GC_FGD :确定属于前景的像素
+//cv::GC_PR_BGD :可能属于背景的像素
+//cv::GC_PR_FGD :可能属于前景的像素
+
+//通过提取数值等于cv::GC_PR_FGD的像素，我们得到二值的分割图像
+//得到可能为前景的像素
+cv::compare(result,cv::GC_PR_FGD,result,cv::CMP_EQ);
+//生成输出图像
+cv::Mat foreground(image.size(),CV_8UC3,cv::Scalar(255,255,255));
+
+image.copyTo(foreground,//不复制背景像素
+              result
+);
+
+//为了提取所有的前景像素，即数值等于cv::GC_PR_FGD或cv::GC_FGD的像素，仅仅需要核对第1个位中的值：
+//使用按位与（bitwise-and）核对第1个位
+result=result&1; //前景时为1
+
+//最后我们通过带掩码的复制运算，获取前景物体的图像（背景为白色）
+//生成输出图像
+cv::Mat foreground(image.size(),CV_8UC3,cv::Scalar(255,255,255)); //图像为全白
+image.copyTo(foreground,result);//不复制背景像素
