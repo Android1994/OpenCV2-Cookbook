@@ -1,0 +1,161 @@
+//位于两条边缘的交点处
+//检测Harris角点
+cv::Mat cornerStrength;
+cv::cornerHarris(
+                         image,
+                         cornerStrength,
+                         3, //相邻像素的尺寸
+                         3，//滤波器的孔径大小，
+                         0.01 //Harris参数
+                        );
+
+//角点强度的阈值
+cv::Mat harrisCorners;
+double threshold=0.0001;
+cv::threshold(cornerStrength,harrisCorners,threshold,255,cv::THRESH_BINARY);
+
+//结果为二值图像
+
+
+//--------------------
+//--------------------------------------
+//通过封装自定义类来改进角点检测的方法
+class HarrisDetector{
+          private:
+           //表示角点强度的32位浮点图
+           cv::Mat cornerStrength;
+           //表示阈值化后角度的32位浮点图像
+           cv::Mat cornerTh;
+           //局部极大值图像（内部）
+           cv::Mat localMax;
+           //导数平滑的相邻像素尺寸
+           int neighbourhood;
+          //梯度计算的孔径大小
+          int aperture;
+          //Harris参数
+           double k;
+          //阈值计算的最大强度
+          double maxStrength;
+          //计算得到的阈值（内部）
+          double threshold;
+          //非极大值抑制的相邻像素的尺寸
+          int nonMaxSize;
+         //非极大值抑制的核
+          cv::Mat kernel;
+ 
+          public:
+          HarrisDetectior():neighbourhood(3),aperture(3),k(0.01),maxStrength(0.0),threshold(0.01),nonMaxSize(3){
+                //创建非极大值抑制的核
+                setLocalMaxWindowSize(nonMaxSize);
+            }
+
+
+
+//为了检测Harris角点，我们使用两个步骤，首先计算每个像素处的Harris值
+//计算Harris角点
+   cv::cornerHarris(const cv::Mat& image){
+                //Harris计算
+                cv::cornerHarris(image,cornerStrength,
+                           neighbourhood,//邻域尺寸
+                           aperture,//滤波器的孔径大小
+                           k //Harris参数
+                 );
+                //内部阈值计算
+                 double minStrength;//未使用
+                 cv::minMaxLoc(cornerStrength,&minStrength,&maxStrength);
+                //局部极大值检测
+                 cv::Mat dilated;//临时图像
+                 cv::dilate(cornerStrength,dilated,cv::Mat());
+                 cv::compare(cornerStrength,dilated,localMax,cv::CMP_EQ);
+       }
+
+//接着，基于特定的阈值获取特征点；阈值被设置为计算得到的最大Harris值的部分
+//由Harris值获取角点图
+cv::Mat getCornerMap(double qualityLevel){
+             cv::Mat cornerMap;
+             //对角点图像进行阈值化
+             threshold=qualityLevel*maxStrength;
+             cv::threshold(cornerStrength,cornerTh,threshold,255,cv::THRESH_BINARY);
+              //转换为8位图像
+              cornerTh.convertTo(cornerMap,CV_8U);
+              //非极大值抑制
+              cv::bitwise_and(cornerMap,localMax,cornerMap);
+               return cornerMap;
+     }
+
+
+//同时还能以cv::Point类型std::vector的形式获取Harris特征
+//由Harris值得到特征点
+void getCorners(std::vector<cv::Point>&points,double qualityLevel){
+                 //得到角点图
+                  cv::Mat cornerMap=getCornerMap(qualityLevel);
+                 //得到角点
+                 getCorners(points,cornerMap);
+             }
+
+//由角点图获取特征点
+void getCorners(std::vector<cv::Point>&points,const cv::Mat& cornerMap){
+                   //遍历像素得到所有特征
+                     for(int y=0;y<cornerMap.rows;y++){
+                           const uchar*rowPtr=cornerMap.ptr<uchar>(y);
+                       for(int x=0;x<cornerMap.cols;x++){
+                              //如果是特征点
+                              if(rowPtr[x])
+                                   points.push_back(cv::Point(x,y));
+                            }
+                      }
+              }
+
+
+//检测到的点通过cv::circle函数得到绘制
+//在特征点的位置绘制圆
+void drawOnImage(cv::Mat& image,const std::vector<cv::Point>&points,cv::Scalar color=cv::Scalar(255,255,255),int radius=3,int thickness=2){
+                  std::vector<cv::Point>::const_iterator it=points.begin();
+                  //对于所有角点
+                  while(it!=points,end()){
+                    //绘制一个圆
+                    cv::circle(image,*it,radius,color,thickness);
+                    ++it;
+                  }
+         }
+
+}
+
+
+
+
+//----------------
+//使用该类
+//创建Harris检测器对象
+HarrisDetector harris;
+//计算Harris值
+harris.detect(image);
+//检测Harris角点
+std::vector<cv::Point>pts;
+harris.getCorners(pts,0.01);
+//绘制Harris角点
+harris.drawOnImage(image,pts);
+
+
+//梯度方向以及与它垂直的方向值都很高
+
+
+//---------------------
+//------------------------------
+//其它改进
+
+//优质特征集合
+//计算适合视觉跟踪的优质特征
+std::vector<cv::Point2f>corners;
+cv::goodFeaturesToTrack(
+                         image,
+                         corners,
+                         500,//返回的最大特征点数目
+                         0.01,//质量等级
+                         10 //两点之间的最小允许距离
+                            );
+
+
+//特征检测器通用接口
+//该接口定义了一个KeyPoint类以封装每个特征点的属性
+//。。。。。。

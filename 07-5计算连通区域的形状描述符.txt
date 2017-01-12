@@ -1,0 +1,64 @@
+//对之前识别到的4个轮廓（contour[0]~contour[3]）计算形状描述符，并绘制结果
+
+//第一个是包围盒（包围形状的最小矩形），应用到右下角的连通区域：
+//测试包围盒
+cv::Rect r0=cv::boundingRect(cv::Mat(contour[0]));
+cv::rectangle(result,r0,cv::Scalar(0),2);
+
+//最小包围圆类似，应用到右上角
+//测试最小包围圆
+float radius;
+cv::Point2f center;
+cv::minEnclosongCircle(cv::Mat(contour[1]),center,radius);
+cv::circle(result,cv::Point(center),static_cast<int>(radius),cv::Scalar(0),2);
+
+//轮廓的多边形近似被应用到左边的连通区域上：
+//测试多边形近似
+std::vector<cv::Point>poly;
+cv::approxPolyDP(
+                      cv::Mat(contours[2]),poly,
+                       5,//近似的精确度
+                       true//这是个闭合形状
+                  );
+//绘制结果
+//遍历每个片段进行绘制
+std::vector<cv::Point>::const_iterator itp=poly.begin();
+while(itp!=(poly.end()-1)){
+          cv::line(result,*itp,*(itp+1),cv::Scalar(0),2);
+          ++itp;
+    }
+//首位用直线相连
+cv::line(result,
+          *(poly.begin()),
+          *(poly.end()-1),cv::Scalar(20),2
+           );
+
+//凸包是另一种多边形近似
+//测试凸包
+std::vector<cv::Point>hull;
+cv::convexHull(cv::Mat(contours[3]),hull);
+
+
+//力矩(Moment)的计算
+//测试力矩
+//遍历所有轮廓
+itc=contours.begin();
+while(itc!=contours.end()){
+         //计算所有的力矩
+        cv::Moments mom=cv::moments(cv::Mat(*itc++));
+        //绘制质心
+        cv::circle(
+          result,
+          //质心坐标转换为整数
+         cv::Point(mom.m10/mom.m00,mom.01/mom.m00),
+         2,cv::Scalar(0),2  
+         );  //绘制黑点
+    }
+
+
+//--------------
+//其它结构化属性计算方式
+//cv::minAreaRect 计算最小包围旋转矩形
+//cv::contourArea计算轮廓面积（像素个数）
+//cv::pointPolygonTest确定一个点是否位于轮廓内
+//cv::matchShapes测量两个轮廓间的相似度
