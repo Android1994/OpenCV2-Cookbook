@@ -1,0 +1,98 @@
+//如果能够获取当前场景背景的图像，那么通过简单的图像差分便可以提取前景：
+//计算当前图像与背景的差异
+cv::absdiff(backgroundImage,currentImage,foreground);
+
+//--------
+//需要动态创建背景的模型
+
+//创建一个封装类
+class BGFSegmentor:public FrameProcessor{
+         cv::Mat gray; //当前灰度图
+         cv::Mat background;//累积背景
+         cv::Mat backImage;//背景图像
+         cv::Mat foreground;//前景图像
+           //背景累加中的学习率
+         double learningRate;
+         int threshold;//前景提取阈值
+     
+      public:
+          BGFSegmentor():threshold(10),learningRate(0.01){}
+
+           //主要的运算过程包含比较当前帧与背景模型，并更新模型
+          //处理方法
+           void process(cv::Mat& frame,cv::Mat& output){
+                    //转换为灰度图像
+                    cv::cvtColor(frame,gray,CV_BGR2GRAY);
+                     //初始化背景为第一帧
+                    if(background.empty())
+                        gray.convertTo(background,CV_32F);
+                      //转换背景图像为8U格式
+                     background.convertTo(backImage,CV_8U);
+                      //计算差值
+                     cv::absdiff(backImage,gray,foreground);
+                      //应用阈值化到前景图像
+                      cv::threshold(foreground,output,threshold,255,cv::THRESH_BINARY_INV);
+                      //对背景累加
+                      cv::accumulateWeighted(gray,background,learningRate,output);
+             }
+............
+}
+
+
+//基于之前的视频处理框架，前景提取算法可以如下构建
+int main(){
+      //创建视频处理器实例
+       VedioProcessor processor;
+      //创建背景/前景分段器
+       FGFGSegmentor segmentor;
+       segmentor.setThreshold(25);
+      //打开视频文件
+       processor.setInput("~.avi");
+      //设置帧处理器
+      processor.setFrameProcessor(&segmentor);
+      //声明显示窗口
+     processor.displayOutput("....");
+      //以原始帧率播放视频
+     processor.setDelay(1000./processor.getFrameRate());
+    //开始处理过程
+    processor.run();
+}
+
+
+//-----------------------------扩展
+//------------------更复杂的建模方法-----------------
+//混合高斯方法
+//OpenCV中的cv::BackgroundSubtractorMOG类实现了该功能
+//用法
+int main(){
+     //打开视频文件
+     cv::VideoCapture capture("~.avi");
+     //检查视频是否成功打开
+    if(!capture.isOpen())
+         return 0;
+     //当前视频帧
+     cv::Mat frame;
+     //前景图像
+    cv::Mat foreground;
+    cv::namedWindow(".........");
+    //使用默认参数的Mixture of Gaussian对象
+    cv::BackgroundSubtractorMOG mog;
+    bool stop(false);
+    //遍历每一帧
+   while(!stop){
+          //读取下一帧
+          if(!capture.read(frame))
+              break;
+         //更新背景并返回前景
+         mog(frame,foreground,0.01);
+         //对图像取反
+         cv::threshold(foreground,foreground,128,255,cv::THRESH_BINARY_INV);
+         //显示前景
+         cv::imshow("...",foreground);
+         //引入延迟
+        //也可通过按键停止
+        if(cv::waitKey(10)>=0)
+          stop=ture;
+     }
+}
+//该类的一个参数是每个像素可能拥有的高斯模型数量

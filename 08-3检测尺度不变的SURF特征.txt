@@ -1,0 +1,74 @@
+//特征点的向量
+std::vector<cv::KeyPoint>keypoints;
+//构造SURF特征检测器
+cv::SurfFeatureDetector surf(
+                                    2500.);//阈值
+//检测SURF特征
+surf.detect(image,keypoints);
+
+
+//绘制这些特征，并使用一个掩码以展示每个特征的缩放因子
+//绘制特征点，加上尺度与方向信息
+cv::drawKeypoints(
+                     image,//原始图像
+                     keypoints,//特征点的向量
+                     featureImage,//生成图像
+                     cv::Scalar(255,255,255), //特征点的颜色
+   cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS//标志位
+ );
+
+//使用DRAW_RICH_KEYPOINTS之后关键点上的圆圈的尺寸与特征的尺度成正比
+
+//--------------------
+//SURF是SIFT的高效变种
+//SIFT
+//特征点向量
+std::vector<cv::KeyPoint>keypoints;
+//构造SIFT检测器
+cv::SiftFeatureDetector sift(
+                                   0.03,//特征的阈值
+                                    10.);//用于降低直线敏感度的阈值
+//检测SIFT特征值
+sift.detect(image,keypoints);
+//基于浮点核，更精确一些
+
+
+
+//---------------------------------------
+//--------------------------------------------------------------//描述SURF特征
+//特征描述子通常是N维向量
+//OpenCV2中引入了一个通用类用于提取不同的特征点描述子
+//构造SURF描述子提取器
+cv::SurfDescriptorExtractor surfDesc;
+//提取SURF描述子
+cv::Mat descriptors1;
+surfDesc.compute(image1,keypoints1,descriptors1);
+
+
+//进行匹配
+//构造匹配器
+cv::BruteForceMatcher<cv::L2<float>>matcher;
+//匹配两幅图像的描述子
+std::vector<cv::DMatch>matches;
+matcher.match(descriptors1,descriptors2,matches);
+
+//使匹配结果可视化
+//对两幅输入图像，匹配的点由直线相连
+//显示距离最近的25个匹配结果
+std::nth_element(
+                        matches.begin(),//初始位置
+                        matches.begin()+24,//排序元素的位置
+                        matches.end()//终止位置
+                        ); 
+//移除第25位之后所有的元素
+matches.erase(matches.begin()+25,matches.end());
+
+//可视化这25个匹配
+cv::Mat imageMatches;
+cv::drawMatches(
+                      image1,keypoints1,//第一幅图像及其特征点
+                      image2,keypoints2,//第二幅图像及其特征点
+                       matches,//匹配结果
+                       imageMatches,//生成的图像
+                      cv::Scalar(255,255,255)//直线的颜色
+                   );

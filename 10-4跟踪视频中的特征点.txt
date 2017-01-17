@@ -1,0 +1,135 @@
+//定义一个新类
+class FeatureTracker:public FrameProcessor{
+         cv::Mat gray; //当前灰度图像
+         cv::Mat gray_prev;//之前灰度图像
+         //两幅图像间跟踪的特征点0->1
+         std::vector<cv::Point2f>points[2];
+         //跟踪的点初始位置
+         std::vector<cv::Point2f>initial;
+         std::vector<cv::Point2f>features; //检测到的特征
+         int max_count; //需要跟踪的最大特征数目
+         double qlevel; //特征检测中的质量等级
+         double minDist;//两点之间的最小距离
+         std::vector<uchar>status; //检测到的特征的状态
+         std::vector<float>err; //跟踪过程中的错误
+         
+      public:
+          FeatureTracker():max_count(500),qlevel(0.01),minDist(10.){}
+
+          //定义process方法，它将在每一帧被调用，
+           void process(cv::Mat& frame,cv::Mat& output){
+                 //转换为灰度图像
+                 cv::cvtColor(frame,gray,CV_BGR2GRAY);
+                  frame.copyTo(output);
+                //1.如果需要添加新的特征点
+                  if(addNewPoints()){
+                       //进行检测
+                       detectFeaturePoints();
+                       //添加检测到的特征到当前跟踪的特征中
+                       points[0].insert(points[0].end(),features.begin(),features.end());
+                        initial.insert(initial.end(),features.begin(),features.end());
+                     }
+
+                  //对于序列中的第一幅图像
+                     if(gray_prev.empty())
+                          gray.copyTo(gray_prev);
+                  //2.跟踪特征点
+                      cv::calcOpticalFlowPyrLK(
+                             gray_prev,gray, //两幅连续图
+                             points[0],//图1中的输入点坐标
+                             points[1],//图2中的输出点坐标
+                             status, //跟踪成功
+                              err //跟踪错误
+                       );
+
+                  //2.遍历所有跟踪的点进行筛选
+                      int k=0;
+                     for(int i=0;i<points[1].size();i++){
+                                //是否需要保留该点
+                                if(acceptTrackedPoint(i)){
+                                    //进行保留
+                                     initial[k]=initial[i];
+                                     points[1][k++]=points[1][i];
+                                }
+                       }
+
+                    //去除不成功的点
+                       points[1].resize(k);
+                    initial.resize(k);
+
+                   //3.处理接受的跟踪点
+                       handleTrackedPoints(frame,output);
+
+                   //4.当前帧的点和图像变为前一帧的点和图像
+                         std::swap(points[1],points[0]);
+                         cv::swap(gray_prev,gray);
+            }
+
+
+     //四个辅助函数-------------------
+      //检测特征点（第八章）
+      void detecFeaturePoints(){
+             //检测特征点
+               cv::goodFeaturesToTrack(
+                    gray,//图像
+                    features,//检测到的特征
+                    max_count,//特征的最大数目
+                    qlevel,//质量等级
+                    minDist//两个特征之间的最小距离
+                );
+      }
+
+     //是否需要检测新的特征点
+        //是否需要添加新的点
+        bool addNewPoints(){
+                //如果点的数量太少
+                return points[0].size()<=10;
+           }
+
+       //移除一些跟踪点
+        //决定哪些点应该跟踪
+       bool acceptTrackedPoint(int i){
+              return status[i]&&
+              //如果它移动了
+              (abs(points[0][i].x-points[1][1].x)+
+               (abs(points[o][i].y-points[1][i].y))>2);
+        }
+
+        //绘制跟踪点，用直线与初始位置相连
+        //处理当前跟踪点
+        void handleTrackerPoints(cv::Mat& frame,cv::Mat& output){
+              //遍历所有跟踪点
+              for(int i=0;i<points[1].size(),i++){
+                  //绘制直线与圆
+                  cv::line(
+                     output,
+                     initial[i],//初始位置
+                     points[1][i],//新位置
+                     cv::Scalar(255,255,255);
+                    );
+                   cv::circle(output,points[1][i],3,cv::Scalar(255,255,255),-1)
+                 }   
+        }
+   
+......
+}
+
+
+
+//使用
+int main(){
+    //创建视频处理器实例
+   VideoProcessor processor;
+   //创建特征跟踪器实例
+    FeatureTracker tracker;
+   //打开视频文件
+   processor.setInput("~.avi");
+    //设置帧处理器对象
+  processor.setFrameProcessor(&tracker);
+   //声明显示窗口
+  processor.displayOutput("Tracked Features");
+  //以原始帧率播放视频
+  processor.etDelayetDelay(1000./processor.getFrameRate());
+ //开始处理过程
+  processor.run(); 
+}

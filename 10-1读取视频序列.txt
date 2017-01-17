@@ -1,0 +1,46 @@
+//提取并读取每一帧
+int main(){
+        //打开视频文件
+        cv::VideoCapture capture("...../~.avi");
+       //检测视频是否成功打开
+        if(!capture.isOpened())
+           return 1;
+        //获取帧率
+        double rate=capture.get(CV_CAP_PROP_FPS);
+       bool stop(false);
+       cv::Mat frame; //当前视频帧
+       cv::namedWindow("Extracted Frame");
+       //每一帧之间的延迟
+       //与视频的帧率相对应
+       int delay=1000/rate;
+       //遍历每一帧
+       while(!stop){
+           //尝试读取下一帧
+           if(!capture.read(frame))
+             break;
+          cv::imshow("..",frame);
+        //引入延迟
+        //也可通过按键停止
+          if(cv::waitKey(delay)>=0)
+               stop=true;
+        }
+
+      //关闭视频文件
+     //将由析构函数调用，因此非必须
+     capture.release();
+}
+
+
+
+
+//-----------------
+//其它
+//set函数用于设置cv::VideoCapture对象的参数
+//跳至帧100
+double position=100.0;
+capture.set(CV_CAP_PROP_POS_FRAMES,position);
+
+//可用重载过的操作符
+capture>>frame;
+
+//读取摄像头需要指定的是整数的ID号而不是文件名

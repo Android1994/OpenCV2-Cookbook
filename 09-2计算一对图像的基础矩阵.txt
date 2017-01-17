@@ -1,0 +1,38 @@
+//两幅观察相同场景的图像之间的投影关系
+//这两幅图像既可以是同一个相机在不同位置拍摄的，也可以是两个相机拍摄的
+
+//转换KeyPoint类型到Point2f
+std::vector<cv::Point2f>selPoints1,selPoints2;
+cv::KeyPoint::convert(keypoints1,selPoints1,pointIndexes1);
+cv::KeyPoint::convert(keypoints2,selPoints2,pointIndexes2);
+
+//向量selPoints1,selPoints2包含着两幅图像中的对应点
+//从7个匹配中计算F矩阵
+cv::Mat fundemental=cv::findFundamentalMat(
+                     cv::Mat(selPoints1),//图1中的点
+                     cv::Mat(selPoints2),//图2中的点
+                     CV_FM_7POINT //使用7个点的方法
+                 );
+
+
+//计算左图中的极线并绘制在右图中
+//在右图中绘制对应的极线
+std::vector<cv::Vec3f>lines1;
+cv::computeCorrespondEpilines(
+                cv::Mat(selPoints1),//图像点
+                 1, //图1（也可以是2）
+                 fundemental,//F矩阵
+                 lines1//一组极线
+             );
+//对于所有极线
+for(vector<cv::Vec3f>::const_iterator it=lines1.begin();it!=lines1.end();++it){
+                   //绘制第一列与最后一列之间的直线
+                   cv::line(
+                         image2,
+                         cv::Point(0,-(*it)[2]/(*it)[1]),
+                         cv::Point(image2.cols,-((*it)[2]+(*it)[0]*image2.cols)/(*it)[1]),
+                         cv::Scalar(255,255,255)
+                       );
+               }
+
+//极点位于所有极线的交点处，并且是另一个相机的中心投影

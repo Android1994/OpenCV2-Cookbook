@@ -1,0 +1,311 @@
+//指定一个回调处理函数，每一帧都调用它
+//函数声明是这样的
+void processFrame(cv::Mat& img,cv::Mat& out);
+
+//作为一个例子：
+void canny(cv::Mat& img,cv::Mat& out){
+            //灰度转换
+            if(img.channels()==3)
+               cv::cvtColor(img,out,CV_BGR2GRAY);
+           //计算Canny边缘
+            cv::Canny(out,out,100,200);
+           //反转图像
+             cv::threshold(out,out,128,255,cv::THRESH_BINARY_INV);
+}
+
+//定义一个视频处理类，类的使用方式如下：
+//创建实例
+VideoProcessor processor;
+//打开视频文件
+processor.setInput("../~.avi");
+//声明显示窗口
+processor.displayInput("Current Frame");
+processor.displayOutput("Output Frame");
+//以原始帧率播放视频
+processor.setDelay(1000./processor.getFrameRate());
+//设置回调函数
+processor.setFrameProcessor(canny);
+//开始处理过程
+processor.run();
+
+//------------------
+//-----------------------------
+//类的实现细节
+class VideoProcessor{
+         private:
+           //OpenCV视频捕捉对象
+           cv::VideoCapture capture;
+           //每帧调用的回调函数(函数的指针)
+          void(*process)(cv::Mat&,cv::Mat&);
+          //确定是否调用回调函数的bool值
+           bool callIt;
+          //输入窗口的名称
+            std::string windowNameInput;
+          //输出窗口名称
+            std::string windowNameOutput;
+          //延迟
+            int delay;
+           //已处理的帧数
+            long fnumber;
+           //在该帧数停止
+            long frameToStop;
+           //是否停止处理
+            bool stop;
+   
+          public:
+             VedioProcessor():callIt(true),delay(0),fnumber(0),stop(false),frameToStop(-1){}
+
+              //设置回调函数
+             void setFrameProcessor( void(*frameProcessingCallbck)(cv::Mat&,cv::Mat&)){
+             process=frameProcessingCallback; 
+             }
+
+             //下面的方法将用于打开视频文件
+             //设置视频文件的名称
+             bool setInput(std::string filename){
+                     fnumber=0;
+                        //释放之前打开过的资源
+                     capture.release();
+                     images.clear();
+                       //打开视频文件
+                      return capture.open(filename);
+               }
+
+
+              //创建显示窗口
+              //创建输入窗口
+               void displayInput(std::string wn){
+                        windowNameInput=wn;
+                        cv::namedWindow(windowNameInput);
+                }
+
+               //创建输出窗口
+              void displayOutput(std::string wn){
+                      windowNameOutput=wn;
+                      cv::namedWindow(windowNameOutput);
+                 }
+              //不再显示处理后的帧
+               void dontDisplay(){
+                    cv::destroyWindow(windowNameInput);
+                    cv::destroyWindow(windowNameOutput);
+                     windowNameInput.clear();
+                    windowNameOutput.clear();
+                }
+
+
+             
+               //run函数
+               //获取并处理序列帧
+               void run(){
+                   //当前帧
+                    cv::Mat frame;
+                   //输出帧
+                   cv::Mat output;
+                  //打开失败时
+                    if(!isOpened())
+                      return;
+                    stop=false;
+                    while(!isStopped()){
+                            //读取下一帧
+                            if(windowNameInput.length()!=0)
+                                 cv::imshow(windowNameInput,frame);
+                            //调用处理函数
+                             if(callIt){
+                                 //处理当前帧
+                                 process(frame,output);
+                                //增加帧数
+                                  fnumber++;
+                                  }else{
+                                    output=frame;
+                                  }
+                           //显示输出帧
+                                if(windowNameOutput.length()!=0)
+                                  cv::imshow(windowNameOutput,output);
+                           //引入延迟
+                                 if(delay>=0&&cv::waitKey(delay)>=0)
+                            stopIt();
+                          //检查是否需要停止运行
+                          if(frameToStop>=0&&getFrameNumber()==frameToStop)
+                           stopIt();
+                      }
+                }
+
+
+                //----------------
+                //其它
+               //停止运行
+                void stopIt(){
+                  stop=true;
+                }
+               //是否已停止
+               bool isStopped(){
+                   return stop;
+                }
+
+               //是否开始捕获设备
+               bool isOpened(){
+                     capture.isOpened();
+                }
+
+               //设置帧间的延迟
+               //0意味着在每帧都等待用户按键
+              //负数意味着没有延迟
+                  void setDelay(int d){
+                    delay=d;
+                  }
+
+                //下面方法是用私有方法读取视频帧
+                 //得到下一帧
+                 //可能是：视频文件或摄像头
+                 bool readNextFrame(cv::Mat& frame){
+                    return capture.read(frame);
+                  }
+
+                 //有时只需要简单打开并播放视频文件，不需要调用回调函数
+                 //需要调用回调函数
+                 void callProcess(){
+                    callIt=true;
+                 }
+
+                //不需要调用回调函数
+                void dontCallProcess(){
+                 callIt=false;
+                }
+                 
+                //最后可以在特定帧停止
+                 void stopAtFrameNo(long frame){
+                       frameToStop=frame;
+                 }  
+
+               //返回下一帧的帧数
+                 long getFrameNumber(){
+                     //得到捕获设备的信息
+                     long fnumber=static_cast<long>(capture.get(CV_CAP_PROP_POS_FRAMES));
+                     return fnumber;
+                 }
+
+................
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//---------------------------------
+//-----------------------------------------------
+//扩展
+
+//1.处理图像序列
+//有时输入序列是由存储在不同文件中的一系列图像组成的
+
+//把图像文件名的数组作为输入
+std::vector<std::string>images;
+//图像向量的迭代器
+std::vector<std::string>::const_iterator itImg;
+//setInput函数用于指定读取的文件名
+//设置输入的图像向量
+bool setInput(const std::vector<std::string>&imgs){
+          fnumber=0;
+           //释放之前打开过的资源
+         capture.release();
+          //输入将是该图像的向量
+          images=imgs;
+          itImg=images.begin();
+          return true;
+}
+
+//isOpened方法变为
+//视频捕捉设备是否已开启
+bool isOpened(){
+          return capture.isOpened()||!images.empty();
+}
+
+//最后一个需要修改的是私有的readNextFrame方法
+//得到下一帧
+//可以是：视频文件；摄像头；图像数组
+bool readNextFrame(cv::Mat& frame){
+        if(images.size()==0)
+            return capture.read(frame);
+        else{
+              if(itImg!=images.end()){
+                 frame=cv::imread(*itImg);
+                 Itimg++;
+                 return frame.data!=0;
+              }else
+               return false;
+           }
+}
+
+
+
+
+//2.使用帧处理类
+//VideoProcessor内部使用的帧处理类如下：
+//帧处理器的接口
+class FrameProcessor{
+        public:
+            //处理方法
+            virtual void process(cv::Mat &input,cv::Mat &output)=0;
+}
+
+//VideoProcessor中的setFrameProcessor方法用于设置FrameProcessor指针
+//设置FrameProcessor实例
+void setFrameProcessor(FrameProcessor*frameProcessorPtr){
+          //使回调函数无效化
+          process=0;
+          //重新设置FrameProcessor实例
+         frameProcessor=frameProcessorPtr;
+         callProcess();
+}
+
+//当指定FrameProcessor实例时，将使之前可能设置过的回调函数无效化；在设置回调函数时，也会使之前可能设置过的FrameProcessor实例无效化
+//设置回调函数
+void setFrameProcessor(void(*frameProcessingCallback)(cv::Mat&,cv::Mat&)){
+       //使FrameProcessor实例无效化
+       frameProcessor=0;
+        //重新设置回调函数
+      process=frameProcessingCallback;
+      callProcess();
+}
+
+
+//run方法的while循环也进行修改
+while(!isStopped()){
+        //读取下一帧
+        if(!readNextFrame(frame))
+          break;
+        //显示输出帧
+       if(windowNameInput.length()!=0)
+          cv::imshow(windowNameInput,frame);
+        //**调用帧处理实例或回调函数**
+       if(callIt){
+             //处理当前帧
+             if(process)//如果是回调函数
+               process(frame,output);
+             else if(frameProcessor)
+                //如果是帧处理实例
+                frameProcessor->process(frame,output);
+                //增加帧数
+                fnumber++;
+           }else{
+               output=frame;
+           }
+          //显示输出帧
+            if(windowNameOutput.length()!=0)
+              cv::imshow(windowNameOutput,output);
+          //引入延迟
+             if(delay>=0&&cv::waitKey(delay)>=0)
+              stopIt();
+          //检查是否需要停止运行
+           if(frameToStop>=0&&getFrameNumber()==frameToStop)
+            stopIt();
+}

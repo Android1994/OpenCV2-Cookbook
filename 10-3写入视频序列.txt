@@ -1,0 +1,162 @@
+//创建视频文件并写入图像帧
+//扩展VideoProcessor类，给予它写视频文件的能力
+//增加一些成员变量和额外的方法
+class VideoProcessor{
+       private:
+        ......
+        //OpenCV的写视频对象
+        cv::VideoWriter writer;
+        //输出文件名称
+       std::string outputFile;
+       //输出图像的当前索引
+       int currentIndex;
+       //输出图像名称中的数字位数
+      int digits;
+       //输出图像的扩展名
+      std::string extension;
+}
+
+//额外的方法被用于指定且打开输出视频文件
+//设置输出视频文件
+//默认使用与输出视频相同的参数
+bool setOutput(const std::string& filename,int codec=0,double framerate=0.0,bool isColor=true){
+          outputFile=filename;
+          extension.clear();
+          if(framerate==0.0)
+             framerate=getFrameRate();//与输入相同
+          char c[4];
+          //使用相同的编码格式
+          if(codec==0){
+                codec=getCodec(c);
+           }
+
+           //打开输出视频
+            return writer.open(
+                       outputFile,//文件名
+                      codec, //将使用的编码格式
+                      framerate,//帧率
+                      getFrameSize（），//尺寸
+                       isColor //是否是彩色视频
+               );
+ }
+
+
+//私有方法writeNextFrame处理两种可能的情况
+//输出帧
+//可能是：视频文件或图像文件
+void writeNextFrame(cv::Mat& frame){
+        if(extension.length()){// 我们输出图像文件
+             std::stringstream ss;
+            //组成输出文件名称
+             ss<<outputFile<<std::setfill('0')<<std::setw(digits)<<currentIndex++<<extension;
+             cv::imwrite(ss.str(),frame);
+           }else //我们输出到视频文件
+             writer.write(frames);
+}
+
+//对于输出是由独立的图像文件组成的情况，需要额外的设置方法
+//设置输出未独立的图像文件
+//扩展名必须是".jpg",".bmp"....
+bool setOutput(const std::string&filename,//前缀
+                         const std::string &ext,    //后缀
+                         int numberOfDigits=3, //数字位数
+                          int startIndex=0 //开始索引
+                     ){
+                      //数字位数必须是正的
+                      if(numberOfDigits<0)
+                         return false;
+                      //文件名及其后缀
+                      outputFile=filename;
+                      extension=ext;
+                     //文件名命中的数字位数
+                      digits=numberOfDigits;
+                     //开始索引
+                      currentIndex=startIndex;
+                     return true;
+}
+
+
+//run方法的视频捕获循环中增加一个新的步骤
+while(!isStopped()){
+        //读取下一帧
+        if(!readNextFrame(frame))
+          break;
+        //显示输出帧
+       if(windowNameInput.length()!=0)
+          cv::imshow(windowNameInput,frame);
+        //调用处理函数或方法
+       if(callIt){
+             //处理当前帧
+             if(process)//如果是回调函数
+               process(frame,output);
+             else if(frameProcessor)
+                //如果是帧处理实例
+                frameProcessor->process(frame,output);
+                //增加帧数
+                fnumber++;
+           }else{
+               output=frame;
+           }
+           //**输出图像序列**
+            if(outputFile.length()!=0)
+               writeNextFrame(output);
+          //显示输出帧
+            if(windowNameOutput.length()!=0)
+              cv::imshow(windowNameOutput,output);
+          //引入延迟
+             if(delay>=0&&cv::waitKey(delay)>=0)
+              stopIt();
+          //检查是否需要停止运行
+           if(frameToStop>=0&&getFrameNumber()==frameToStop)
+            stopIt();
+}
+
+
+//--------------
+//使用
+//创建实例
+VideoProcessor processor;
+//打开视频文件
+processor.setInput("../~.avi");
+processor.setFrameProcessor(canny);
+processor.setOutput("../~.avi");
+//开始处理过程
+processor.run();
+
+//如果希望结果保存到一系列图像中，那么可以将先前的语句修改为
+processor.setOutput("../~",".jpg");
+//使用默认的数字位数（3）和开始索引（0），将创建~000.jpg、~001.jpg、~002.jpg等
+
+
+
+//--------------------
+//定义一个方法以获取输入视频的编解码
+//得到输入视频的编解码
+int getCodec(char codec[4]){
+       //未指定图像数组
+         if(images.size()!=0)return -1;
+         union{//4-char编码的数据结果
+               int value;
+               char code[4];
+          }returned;
+        //得到编码
+         returned.value=static_cast<int>(capture.get(CV_CAP_PROP_FOURCC));
+        //得到4个字符
+          codec[0]=returned.code[0];
+          codec[1]=returned.code[1];
+          codec[2]=returned.code[2];
+          codec[3]=returned.code[3];
+        //返回对应的整数
+            return returned.value;
+}
+
+
+//如果打开的是测试视频序列：
+char codec[4];
+processor.getCodec(codec);
+std::cout<<"Codec:"<<codec[0]<<codec[1]<<codec[2]<<codec[3]<<std::endl;
+//我们将得到Codec:XVID
+
+//当写入到视频文件时，编解码必须通过四字符形式指定，这是open方法的第二个参数
+//setOutput方法的默认选项-使用与输入视频相同的编解码
+//也可以传递-1，这将弹出窗口要求你从可选的编解码中挑选一个

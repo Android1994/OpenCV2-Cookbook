@@ -1,0 +1,142 @@
+//OpenCV使用棋盘图案来生成。。。
+//需提供一幅图像和棋盘的尺寸（水平方向和垂直方向内部角点的个数）
+//输出图像角点的vector
+std::vector<cv::Point2f>imageCorners;
+//棋牌中角点数目
+cv::Size boardSize(6,4);
+//获取棋盘的角点
+bool found=cv::findChessboardCorners(image,boardSize,imageCorners);
+
+
+//绘制角点
+cv::drawChessboardCorners(
+                                         image,
+                                      boardSize,imageCorners,
+                                         found //已经找到的角点
+                                         );
+
+
+
+//为了标定相机，我们需要同时输入图像点以及对应的3D点，标定过程封装在CameraCalibrator类中
+class CameraCalibrator{
+          //输入点
+          //位于世界坐标的点
+          std::vector<std::vector<cv::Point3f>>objectPoints;
+          //像素坐标的点
+         std::vector<std::vector<cv::Point2f>>imagePoints;
+        
+         //输出矩阵
+         cv::Mat cameraMatrix;
+         cv::Mat distCoeffs;
+        
+         //标定方式
+         int flag;
+
+          //用于图像去畸变
+         cv::Mat map1,map2;
+         bool mustInitUndistort;
+
+         public:
+            CameraCalibrator():flag(0),mustInitUndistort(true){};
+
+
+             //只要我们将坐标系放置于棋盘上，那么角点的3D坐标可以轻易确定，实现方法是以不同的棋盘图像文件作为输入
+//打开棋盘图像并提取角点
+              int CameraCalibrator::addChessboardPoints(const std::vector<std::string>& filelist,cv::Size& boardSize){
+                   //棋盘上的点的两种坐标
+                  std::vector<cv::Point2f>imageCorners;
+                 std::vector<cv::Point3f>objectCorners;
+                   //3D场景中的点
+                   //在棋盘坐标系中初始化棋盘角点
+                   //这些店位于(x,y,z)=(i,j,0)
+                     for(int i=0;i<boardSize.height;i++)
+                        for(int j=0;j<boardSize.width;j++)
+                           objectCorners.push_back(cv::Point3f(i,j,0.0f));
+
+                      //2D图像中的点：
+                     cv::Mat image;//为了保存棋盘图像
+                     int successes=0;
+                      //for all viewpoints
+                      for(int i=0;i<filelist.size();i++){
+                              //打开图像
+                             image=cv::imread(filelist[i],0);
+                             //得到角点
+                             bool found=cv::findChessboardCorners(image,boardSize,imageCorners);
+                               //获取亚像素精度
+                              cv::cornerSubPix(image,imageCorners,cv::Size(5,5),cv::Size(-1,-1),
+          cv::TermCriteria(cv::TermCriteria::MAX_ITER+cv::TermCriteria::EPS,30), //最大迭代数目
+            0.11//最小精度
+            );
+
+                               //如果角点数目满足要求，那么将它加入数据
+                if(imageCorners.size()==boardSize.area()){
+                      //添加一个视角中的图像点及场景点
+                         addPoints(imageCorners,objectCorners);
+                         successes++;
+                  }
+                      }
+                return sucesses;
+                   }
+
+
+
+//成功检测到一组角点后，这些点被添加到坐标点的向量中
+//添加场景点与对应的图像点
+void CameraCalibrator::addPoints(const std::vector<cv::Point2f>& imageCorners, const std::vector<cv::Point3f>& objectCorners){
+                 //2D图像点
+                 imagePoints.push_back(imageCorners);
+                //对应3D场景中的点
+                 objectPoints.push_back(objectCorners);
+           }
+
+
+
+
+//一旦我们处理了足够多的棋盘图像，并获取了大量的2D/3D点对，那么我们可以开始计算标定参数
+//进行标定，返回重投影误差(re-projection error)
+double CameraCalibrator::calibrate(cv::Size&imageSize){
+             //必须重新进行去畸变
+             mustInitUndistort=true;
+            //输出旋转和平移
+              std::vector<cv::Mat>rvecs,tvecs;
+            //开始标定
+             return calibrateCamera(
+                  objectPoints,//3D点
+                  imagePoints,//图像点
+                  imageSize,//图像尺寸
+                  cameraMatrix,//输出的相机矩阵
+                  distCoeffs,//输出的畸变矩阵
+                 rvecs,tves,//旋转和平移
+                  flag //额外选项
+              );
+}
+//一般需要10~20幅棋盘图像
+
+
+//标定后去除图像中的畸变
+cv::Mat CameraCalibrator::remap(const cv::Mat& image){
+              cv::Mat undistorted;
+               if(mustInitUndistort){//每次标定只需要初始化一次
+                 cv::initUndistortRectifyMap(
+                               cameraMatrix,//计算得到的相机矩阵
+                               distCoeffs,//计算得到的畸变矩阵
+                                cv::Mat(),//可选的rectification矩阵（此处为空）
+                                 cv::Mat(),//用于生成undistorted对象的相机矩阵
+                                   image.size(), //undistorted对象的尺寸
+                                   CV_32FC1,//输出的映射图像类型
+                                    map1,map2  //x坐标和y坐标映射函数     
+);
+                mustInitUndistort=false;
+               }
+
+//应用映射函数
+cv::remap(image,undistorted,map1,map2,
+                  cv::INTER_LINEAR); //插值类型
+
+return undistorted;
+}
+//一旦图像的畸变被去除，便能得到正规的透视图像
+
+}
+
+
